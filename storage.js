@@ -1,276 +1,285 @@
 /**
  * ========================================
- * LocalStorage Service
- * Handles all data persistence operations
+ * Firebase + LocalStorage Service
+ * Hybrid storage: Firebase Cloud + LocalStorage backup
  * ========================================
  */
+
+// Firebase Configuration (သင့် Config ထည့်ပါ)
+const firebaseConfig = {
+    apiKey: "AIzaSyDo2d-XitGzlNIHPG9J6A7RFFUT57L1yjs",
+    authDomain: "paid-member-manage.firebaseapp.com",
+    projectId: "paid-member-manage",
+    storageBucket: "paid-member-manage.firebasestorage.app",
+    messagingSenderId: "601892714749",
+    appId: "1:601892714749:web:ffc48604ab076a37b9a694",
+    measurementId: "G-YYXTYH9ZMV"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
 class StorageService {
     constructor() {
         this.STORAGE_KEY = 'membership_manager_data';
-        this.data = this.load();
+        this.data = this.getDefaultData();
+        this.isFirebaseReady = false;
+        this.members = [];
+        this.transactions = [];
+        this.settings = { theme: 'light', currency: 'MMK' };
+        this.lastUpdated = new Date().toISOString();
+        this.isLoading = false;
     }
 
-    /**
-     * Initialize default data structure
-     */
     getDefaultData() {
         return {
             members: [],
             transactions: [],
-            settings: {
-                theme: 'light',
-                currency: 'MMK',
-                taxRate: 0
-            },
+            settings: { theme: 'light', currency: 'MMK' },
             lastUpdated: new Date().toISOString()
         };
     }
 
-    /**
-     * Load data from localStorage
-     */
-    load() {
+    // ----- Load data from Firebase -----
+    async load() {
+        if (this.isLoading) return;
+        this.isLoading = true;
+
+        try {
+            console.log('📡 Loading data from Firebase...');
+
+            // Load members
+            const membersSnapshot = await db.collection('members')
+                .orderBy('createdAt', 'desc')
+                .get();
+            this.members = [];
+            membersSnapshot.forEach(doc => {
+                this.members.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+
+            // Load transactions
+            const transactionsSnapshot = await db.collection('transactions')
+                .orderBy('createdAt', 'desc')
+                .get();
+            this.transactions = [];
+            transactionsSnapshot.forEach(doc => {
+                this.transactions.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+
+            // Load settings
+            const settingsDoc = await db.collection('settings').doc('appSettings').get();
+            if (settingsDoc.exists) {
+                this.settings = settingsDoc.data();
+            }
+
+            this.isFirebaseReady = true;
+            this.lastUpdated = new Date().toISOString();
+
+            // Save to localStorage as backup
+            this.backupToLocalStorage();
+
+            console.log(`✅ Firebase loaded: ${this.members.length} members, ${this.transactions.length} transactions`);
+            this.isLoading = false;
+            return this.data;
+
+        } catch (error) {
+            console.error('❌ Firebase load error:', error);
+            console.log('📦 Falling back to localStorage...');
+            this.loadFromLocalStorage();
+            this.isLoading = false;
+            return this.data;
+        }
+    }
+
+    // ----- Backup to localStorage -----
+    backupToLocalStorage() {
+        try {
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify({
+                members: this.members,
+                transactions: this.transactions,
+                settings: this.settings,
+                lastUpdated: this.lastUpdated
+            }));
+        } catch (e) {
+            console.error('Backup error:', e);
+        }
+    }
+
+    // ----- Load from localStorage (fallback) -----
+    loadFromLocalStorage() {
         try {
             const stored = localStorage.getItem(this.STORAGE_KEY);
             if (stored) {
                 const parsed = JSON.parse(stored);
-                // Ensure all required keys exist
-                return {
-                    ...this.getDefaultData(),
-                    ...parsed
-                };
+                this.members = parsed.members || [];
+                this.transactions = parsed.transactions || [];
+                this.settings = parsed.settings || { theme: 'light', currency: 'MMK' };
+                this.lastUpdated = parsed.lastUpdated || new Date().toISOString();
+                console.log(`📦 localStorage loaded: ${this.members.length} members, ${this.transactions.length} transactions`);
             }
-        } catch (error) {
-            console.error('Error loading data:', error);
+        } catch (e) {
+            console.error('localStorage load error:', e);
         }
-        return this.getDefaultData();
     }
 
-    /**
-     * Save data to localStorage
-     */
-    save() {
+    // ----- Save data to Firebase -----
+    async save() {
         try {
-            this.data.lastUpdated = new Date().toISOString();
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.data));
+            this.lastUpdated = new Date().toISOString();
+
+            // Save members to Firestore
+            const membersCollection = db.collection('members');
+            for (const member of this.members) {
+                const { id, ...memberData } = member;
+                await membersCollection.doc(id).set(memberData, { merge: true });
+            }
+
+            // Save transactions to Firestore
+            const transactionsCollection = db.collection('transactions');
+            for (const transaction of this.transactions) {
+                const { id, ...transactionData } = transaction;
+                await transactionsCollection.doc(id).set(transactionData, { merge: true });
+            }
+
+            // Save settings
+            await db.collection('settings').doc('appSettings').set(this.settings, { merge: true });
+
+            // Backup to localStorage
+            this.backupToLocalStorage();
+
+            console.log('✅ Data saved to Firebase successfully!');
             return true;
+
         } catch (error) {
-            console.error('Error saving data:', error);
+            console.error('❌ Firebase save error:', error);
+            // Fallback: Save to localStorage only
+            this.backupToLocalStorage();
             return false;
         }
     }
 
-    /**
-     * Get all members
-     */
+    // ----- Get all members -----
     getMembers() {
-        return this.data.members || [];
+        return this.members || [];
     }
 
-    /**
-     * Get a single member by ID
-     */
+    // ----- Get all transactions -----
+    getTransactions() {
+        return this.transactions || [];
+    }
+
+    // ----- Get a single member by ID -----
     getMember(id) {
-        return this.data.members.find(m => m.id === id) || null;
+        return this.members.find(m => m.id === id) || null;
     }
 
-    /**
-     * Add a new member
-     */
-    addMember(memberData) {
-        // Use the purchase date from the form, not current date
+    // ----- Add a new member -----
+    async addMember(memberData) {
         const purchaseDate = memberData.purchaseDate || new Date().toISOString().split('T')[0];
-    
+        const id = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+
         const member = {
-            id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+            id: id,
             ...memberData,
-            createdAt: new Date(purchaseDate).toISOString(), // Use purchase date
+            createdAt: new Date(purchaseDate).toISOString(),
             updatedAt: new Date().toISOString(),
             isActive: true,
             history: []
         };
-        this.data.members.push(member);
-        this.save();
+
+        this.members.unshift(member);
+        await this.save();
         return member;
     }
 
-    /**
-     * Update an existing member
-     */
-    updateMember(id, updates) {
-        const index = this.data.members.findIndex(m => m.id === id);
+    // ----- Update an existing member -----
+    async updateMember(id, updates) {
+        const index = this.members.findIndex(m => m.id === id);
         if (index === -1) return null;
-        
-        this.data.members[index] = {
-            ...this.data.members[index],
+
+        this.members[index] = {
+            ...this.members[index],
             ...updates,
             updatedAt: new Date().toISOString()
         };
-        this.save();
-        return this.data.members[index];
+        await this.save();
+        return this.members[index];
     }
 
-    /**
-     * Delete a member
-     */
-    deleteMember(id) {
-        this.data.members = this.data.members.filter(m => m.id !== id);
-        this.save();
+    // ----- Delete a member -----
+    async deleteMember(id) {
+        this.members = this.members.filter(m => m.id !== id);
+        await this.save();
         return true;
     }
 
-    /**
-     * Get all transactions
-     */
-    getTransactions() {
-        return this.data.transactions || [];
-    }
-
-    /**
-     * Add a transaction
-     */
-    addTransaction(transactionData) {
-        // Use purchase date for transaction creation date
+    // ----- Add a transaction -----
+    async addTransaction(transactionData) {
         const purchaseDate = transactionData.purchaseDate || new Date().toISOString().split('T')[0];
-    
+        const id = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+
         const transaction = {
-            id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+            id: id,
             ...transactionData,
-            createdAt: new Date(purchaseDate).toISOString() // FIXED: Use purchase date
+            createdAt: new Date(purchaseDate).toISOString()
         };
-        this.data.transactions.push(transaction);
-        this.save();
+
+        this.transactions.unshift(transaction);
+        await this.save();
         return transaction;
     }
 
-    /**
-     * Get transactions for a specific member
-     */
+    // ----- Get transactions for a specific member -----
     getMemberTransactions(memberId) {
-        return this.data.transactions.filter(t => t.memberId === memberId);
+        return this.transactions.filter(t => t.memberId === memberId);
     }
 
-    /**
-     * Get transactions for a date range
-     */
-    getTransactionsByDate(startDate, endDate) {
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        return this.data.transactions.filter(t => {
-            const date = new Date(t.createdAt);
-            return date >= start && date <= end;
-        });
-    }
-
-    /**
-     * Calculate total revenue
-     */
+    // ----- Calculate total revenue -----
     getTotalRevenue() {
-        return this.data.transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+        return this.transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
     }
 
-    /**
-     * Get revenue by date
-     */
-    getRevenueByDate(date) {
-        const target = new Date(date);
-        return this.data.transactions
-            .filter(t => {
-                const tDate = new Date(t.createdAt);
-                return tDate.toDateString() === target.toDateString();
-            })
-            .reduce((sum, t) => sum + (t.amount || 0), 0);
+    // ----- Get storage statistics -----
+    getStats() {
+        return {
+            totalMembers: this.members.length,
+            totalTransactions: this.transactions.length,
+            totalRevenue: this.getTotalRevenue(),
+            storageUsed: new Blob([localStorage.getItem(this.STORAGE_KEY)]).size,
+            lastUpdated: this.lastUpdated,
+            isFirebaseConnected: this.isFirebaseReady
+        };
     }
 
-    /**
-     * Get revenue by month
-     */
-    getRevenueByMonth(year, month) {
-        return this.data.transactions
-            .filter(t => {
-                const date = new Date(t.createdAt);
-                return date.getFullYear() === year && date.getMonth() === month;
-            })
-            .reduce((sum, t) => sum + (t.amount || 0), 0);
-    }
-
-    /**
-     * Get members by product
-     */
-    getMembersByProduct(product) {
-        return this.data.members.filter(m => m.product === product);
-    }
-
-    /**
-     * Get members by subscription plan
-     */
-    getMembersByPlan(plan) {
-        return this.data.members.filter(m => m.plan === plan);
-    }
-
-    /**
-     * Get members by payment method
-     */
-    getMembersByPayment(payment) {
-        return this.data.members.filter(m => m.paymentMethod === payment);
-    }
-
-    /**
-     * Get expired members
-     */
-    getExpiredMembers() {
-        const now = new Date();
-        return this.data.members.filter(m => {
-            if (!m.expiryDate) return false;
-            return new Date(m.expiryDate) < now;
-        });
-    }
-
-    /**
-     * Get members expiring soon (within 7 days)
-     */
-    getMembersExpiringSoon() {
-        const now = new Date();
-        const sevenDays = new Date(now);
-        sevenDays.setDate(sevenDays.getDate() + 7);
-        
-        return this.data.members.filter(m => {
-            if (!m.expiryDate) return false;
-            const expiry = new Date(m.expiryDate);
-            return expiry >= now && expiry <= sevenDays;
-        });
-    }
-
-    /**
-     * Generate a unique ID
-     */
-    generateId() {
-        return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
-    }
-
-    /**
-     * Export all data as JSON
-     */
+    // ----- Export all data as JSON -----
     exportData() {
-        return JSON.stringify(this.data, null, 2);
+        return JSON.stringify({
+            members: this.members,
+            transactions: this.transactions,
+            settings: this.settings,
+            lastUpdated: this.lastUpdated
+        }, null, 2);
     }
 
-    /**
-     * Import data from JSON
-     */
-    importData(jsonData) {
+    // ----- Import data from JSON -----
+    async importData(jsonData) {
         try {
             const data = JSON.parse(jsonData);
-            // Validate data structure
-            if (!data.members || !data.transactions) {
-                throw new Error('Invalid data structure');
-            }
-            this.data = {
-                ...this.getDefaultData(),
-                ...data
-            };
-            this.save();
+            if (!data.members || !data.transactions) throw new Error('Invalid data');
+
+            this.members = data.members || [];
+            this.transactions = data.transactions || [];
+            this.settings = data.settings || { theme: 'light', currency: 'MMK' };
+            this.lastUpdated = new Date().toISOString();
+
+            await this.save();
             return true;
         } catch (error) {
             console.error('Error importing data:', error);
@@ -278,31 +287,51 @@ class StorageService {
         }
     }
 
-    /**
-     * Clear all data (with confirmation)
-     */
-    clearAllData() {
-        this.data = this.getDefaultData();
-        this.save();
+    // ----- Clear all data -----
+    async clearAllData() {
+        try {
+            // Clear Firebase data
+            const membersSnapshot = await db.collection('members').get();
+            for (const doc of membersSnapshot.docs) {
+                await doc.ref.delete();
+            }
+
+            const transactionsSnapshot = await db.collection('transactions').get();
+            for (const doc of transactionsSnapshot.docs) {
+                await doc.ref.delete();
+            }
+
+            await db.collection('settings').doc('appSettings').delete();
+
+        } catch (e) {
+            console.error('Firebase clear error:', e);
+        }
+
+        this.members = [];
+        this.transactions = [];
+        this.settings = { theme: 'light', currency: 'MMK' };
+        this.lastUpdated = new Date().toISOString();
+        localStorage.removeItem(this.STORAGE_KEY);
+        await this.save();
         return true;
     }
 
-    /**
-     * Get storage statistics
-     */
-    getStats() {
-        return {
-            totalMembers: this.data.members.length,
-            totalTransactions: this.data.transactions.length,
-            totalRevenue: this.getTotalRevenue(),
-            storageUsed: new Blob([localStorage.getItem(this.STORAGE_KEY)]).size,
-            lastUpdated: this.data.lastUpdated
-        };
+    // ----- Sync data from Firebase (refresh) -----
+    async sync() {
+        await this.load();
+        return this.data;
     }
 }
 
 // Create a singleton instance
 const storage = new StorageService();
+
+// Auto-load data when script loads
+document.addEventListener('DOMContentLoaded', async () => {
+    await storage.load();
+    console.log('✅ Storage initialized with Firebase + LocalStorage!');
+    console.log(`📊 ${storage.members.length} members, ${storage.transactions.length} transactions`);
+});
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
