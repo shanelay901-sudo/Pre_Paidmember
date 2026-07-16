@@ -111,15 +111,37 @@ class StorageService {
         return this.data.members[index];
     }
 
-    /**
-     * Delete a member
-     */
-    deleteMember(id) {
-        this.data.members = this.data.members.filter(m => m.id !== id);
-        this.save();
-        return true;
-    }
+    // ----- Delete a member (SOFT DELETE) -----
+async deleteMember(id) {
+    const member = this.getMember(id);
+    if (!member) return false;
+    
+    // Mark as deleted instead of removing
+    const index = this.members.findIndex(m => m.id === id);
+    this.members[index] = {
+        ...member,
+        isDeleted: true,
+        deletedAt: new Date().toISOString(),
+        username: `${member.username} (Deleted)`
+    };
+    await this.save();
+    return true;
+}
 
+// ----- Get members (excluding deleted) -----
+getMembers() {
+    return this.members.filter(m => !m.isDeleted);
+}
+
+// ----- Get all members including deleted -----
+getAllMembers() {
+    return this.members || [];
+}
+
+// ----- Get member (including deleted) -----
+getMember(id) {
+    return this.members.find(m => m.id === id) || null;
+}
     /**
      * Get all transactions
      */
