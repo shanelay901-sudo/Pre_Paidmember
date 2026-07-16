@@ -1,11 +1,8 @@
-/**
- * ========================================
- * Firebase + LocalStorage Service
- * Hybrid storage: Firebase Cloud + LocalStorage backup
- * ========================================
- */
+// ========================================
+// FIREBASE + LOCALSTORAGE STORAGE SERVICE (FIXED)
+// ========================================
 
-// Firebase Configuration (သင့် Config ထည့်ပါ)
+// Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyDo2d-XitGzlNIHPG9J6A7RFFUT57L1yjs",
     authDomain: "paid-member-manage.firebaseapp.com",
@@ -129,23 +126,27 @@ class StorageService {
         }
     }
 
-    // ----- Save data to Firebase -----
+    // ----- Save data to Firebase (FIXED) -----
     async save() {
         try {
             this.lastUpdated = new Date().toISOString();
 
-            // Save members to Firestore
+            // Save members to Firestore - Filter out undefined values
             const membersCollection = db.collection('members');
             for (const member of this.members) {
                 const { id, ...memberData } = member;
-                await membersCollection.doc(id).set(memberData, { merge: true });
+                // Remove undefined values
+                const cleanData = this.removeUndefined(memberData);
+                await membersCollection.doc(id).set(cleanData, { merge: true });
             }
 
-            // Save transactions to Firestore
+            // Save transactions to Firestore - Filter out undefined values
             const transactionsCollection = db.collection('transactions');
             for (const transaction of this.transactions) {
                 const { id, ...transactionData } = transaction;
-                await transactionsCollection.doc(id).set(transactionData, { merge: true });
+                // Remove undefined values
+                const cleanData = this.removeUndefined(transactionData);
+                await transactionsCollection.doc(id).set(cleanData, { merge: true });
             }
 
             // Save settings
@@ -165,6 +166,17 @@ class StorageService {
         }
     }
 
+    // ----- Helper: Remove undefined values from object -----
+    removeUndefined(obj) {
+        const result = {};
+        for (const key in obj) {
+            if (obj[key] !== undefined && obj[key] !== null) {
+                result[key] = obj[key];
+            }
+        }
+        return result;
+    }
+
     // ----- Get all members -----
     getMembers() {
         return this.members || [];
@@ -180,14 +192,21 @@ class StorageService {
         return this.members.find(m => m.id === id) || null;
     }
 
-    // ----- Add a new member -----
+    // ----- Add a new member (FIXED) -----
     async addMember(memberData) {
         const purchaseDate = memberData.purchaseDate || new Date().toISOString().split('T')[0];
         const id = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 
         const member = {
             id: id,
-            ...memberData,
+            username: memberData.username || '',
+            product: memberData.product || '',
+            plan: memberData.plan || '',
+            price: memberData.price || 0,
+            paymentMethod: memberData.paymentMethod || '',
+            purchaseDate: purchaseDate,
+            expiryDate: memberData.expiryDate || '',
+            notes: memberData.notes || '',
             createdAt: new Date(purchaseDate).toISOString(),
             updatedAt: new Date().toISOString(),
             isActive: true,
@@ -220,14 +239,22 @@ class StorageService {
         return true;
     }
 
-    // ----- Add a transaction -----
+    // ----- Add a transaction (FIXED) -----
     async addTransaction(transactionData) {
         const purchaseDate = transactionData.purchaseDate || new Date().toISOString().split('T')[0];
         const id = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 
         const transaction = {
             id: id,
-            ...transactionData,
+            memberId: transactionData.memberId || '',
+            username: transactionData.username || '',
+            product: transactionData.product || '',
+            plan: transactionData.plan || '',
+            amount: transactionData.amount || 0,
+            paymentMethod: transactionData.paymentMethod || '',
+            purchaseDate: purchaseDate,
+            expiryDate: transactionData.expiryDate || '',
+            type: transactionData.type || 'purchase',
             createdAt: new Date(purchaseDate).toISOString()
         };
 
