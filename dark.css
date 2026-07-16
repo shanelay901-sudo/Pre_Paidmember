@@ -1,0 +1,209 @@
+/* ========================================
+   Dark Mode Styles
+   ======================================== */
+
+[data-theme="dark"] {
+    --bg-primary: #000000;
+    --bg-secondary: #1C1C1E;
+    --bg-tertiary: #2C2C2E;
+    --text-primary: #F5F5F7;
+    --text-secondary: #AEAEB2;
+    --text-tertiary: #636366;
+    --border-color: #38383A;
+    --shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+    --shadow-hover: 0 8px 40px rgba(0, 0, 0, 0.6);
+    --glass-bg: rgba(28, 28, 30, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .main-nav {
+    background: rgba(28, 28, 30, 0.9);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .dashboard-card,
+[data-theme="dark"] .members-table-container,
+[data-theme="dark"] .calendar-container,
+[data-theme="dark"] .calendar-summary,
+[data-theme="dark"] .calendar-transactions,
+[data-theme="dark"] .report-section,
+[data-theme="dark"] .report-stat {
+    background: rgba(28, 28, 30, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .calendar-cell {
+    background: var(--bg-secondary);
+}
+
+[data-theme="dark"] .calendar-cell:hover:not(.empty) {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .calendar-cell.today {
+    border-color: var(--primary);
+    background: rgba(0, 122, 255, 0.1);
+}
+
+[data-theme="dark"] .search-box input,
+[data-theme="dark"] .filter-select,
+[data-theme="dark"] .form-group input,
+[data-theme="dark"] .form-group select,
+[data-theme="dark"] .form-group textarea,
+[data-theme="dark"] .report-actions input {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .search-box input:focus,
+[data-theme="dark"] .form-group input:focus,
+[data-theme="dark"] .form-group select:focus,
+[data-theme="dark"] .form-group textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+}
+
+[data-theme="dark"] .table th {
+    border-bottom-color: var(--border-color);
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .table td {
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .table tbody tr:hover {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .transaction-item {
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .detail-item {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .modal {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .toast {
+    background: rgba(28, 28, 30, 0.95);
+    border: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .product-badge.doujinshi {
+    background: rgba(88, 86, 214, 0.25);
+    color: #7C7AFF;
+}
+
+[data-theme="dark"] .product-badge.manhwa {
+    background: rgba(255, 149, 0, 0.25);
+    color: #FFA94D;
+}
+
+[data-theme="dark"] .payment-badge.kpay {
+    background: rgba(0, 122, 255, 0.25);
+    color: #409CFF;
+}
+
+[data-theme="dark"] .payment-badge.wavepay {
+    background: rgba(255, 204, 0, 0.25);
+    color: #FFD93D;
+}
+
+[data-theme="dark"] .payment-badge.ayapay {
+    background: rgba(255, 59, 48, 0.25);
+    color: #FF6B60;
+}
+
+[data-theme="dark"] .status-badge.status-success {
+    background: rgba(52, 199, 89, 0.25);
+    color: #6CDB7E;
+}
+
+[data-theme="dark"] .status-badge.status-warning {
+    background: rgba(255, 149, 0, 0.25);
+    color: #FFA94D;
+}
+
+[data-theme="dark"] .status-badge.status-danger {
+    background: rgba(255, 59, 48, 0.25);
+    color: #FF6B60;
+}
+
+[data-theme="dark"] .status-badge.status-info {
+    background: rgba(90, 200, 250, 0.25);
+    color: #8AD8FA;
+}
+
+[data-theme="dark"] .range-btn {
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .range-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+[data-theme="dark"] .reports-tabs {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .tab-btn.active {
+    background: var(--bg-secondary);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .period-selector {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .period-btn.active {
+    background: var(--bg-secondary);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .payment-item.kpay {
+    background: rgba(0, 122, 255, 0.15);
+    border: 1px solid rgba(0, 122, 255, 0.2);
+}
+
+[data-theme="dark"] .payment-item.wave {
+    background: rgba(255, 204, 0, 0.15);
+    border: 1px solid rgba(255, 204, 0, 0.2);
+}
+
+[data-theme="dark"] .payment-item.aya {
+    background: rgba(255, 59, 48, 0.15);
+    border: 1px solid rgba(255, 59, 48, 0.2);
+}
+
+/* Dark mode scrollbar */
+[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: var(--text-tertiary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}
+
+/* Dark mode modal overlay */
+[data-theme="dark"] .modal-overlay {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+/* Dark mode chart colors */
+[data-theme="dark"] .chart-container canvas {
+    filter: brightness(0.9);
+}
